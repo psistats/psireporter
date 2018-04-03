@@ -1,21 +1,30 @@
 import uuid
 from datetime import datetime
 import calendar
+from psireporter.registry import Registry
+
+class PluginError(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+class OutputterPlugin(type):
+    def __init__(cls, name, bases, namespaces):
+        super(OutputterPlugin, cls).__init__(name, bases, namespaces)
+        Registry.SetEntry("outputters", cls.ID, cls)
 
 
-class RegisterPlugin():
-    def __init__(self, plugin_id, plugin_name, plugin_type):
-        self.plugin_id = plugin_id
-        self.plugin_name = plugin_name
-        self.plugin_type = plugin_type
+class ReporterPlugin(type):
+    def __init__(cls, name, bases, namespaces):
 
-    def __call__(self, cls, *args, **kwargs):
-        setattr(cls, "PLUGIN_ID", self.plugin_id)
-        setattr(cls, "PLUGIN_TYPE", self.plugin_type)
+        if not hasattr(cls, "ID"):
+            raise PluginError("Missing class attribute ID")
 
-        PluginRegistry.Get().add_plugin(cls)
+        if not hasattr(cls, "report"):
+            raise PluginError("Reporter plugins must implement the method 'report'")
 
-        return cls
+        super(ReporterPlugin, cls).__init__(name, bases, namespaces)
+        Registry.SetEntry("reporters", cls.ID, cls)
+
 
 
 class Plugin():

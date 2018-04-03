@@ -11,7 +11,7 @@ matrix:
 
 install:
   - pip install tox
-scripts:
+script:
   - tox
 after_success:
   - codecov

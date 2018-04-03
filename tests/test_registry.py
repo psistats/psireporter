@@ -8,7 +8,7 @@ def test_add_entry():
     assert Registry.GetEntry("testreg1", "testent1") == "entry"
 
 def test_bad_key():
-    
+
     with pytest.raises(RegistryKeyError) as excinfo:
         entry = Registry.GetEntry("testreg", "foobar")
 
@@ -65,5 +65,11 @@ def test_get_entries():
     Registry.ClearAll()
     Registry.SetEntry("some-registry", "foo", "bar")
     Registry.SetEntry("some-registry", "hello", "world")
-   
-    assert Registry.GetEntries("some-registry") == (("foo", "bar"), ("hello", "world"),)
+
+    entries = Registry.GetEntries('some-registry')
+
+    assert ("foo","bar") in entries
+    assert ("hello", "world") in entries
+    assert len(entries) == 2
+
+
