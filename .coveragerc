@@ -1,6 +1,11 @@
 [run]
-omit = tests/*
+omit = 
+  tests/*
+  .tox/*
+include = psireporter/*
 branch = True
+source = psireporter/
 
 [report]
 show_missing = True
+
