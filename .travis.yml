@@ -11,6 +11,13 @@ matrix:
     - python: 3.5
       env: TOXENV=codecov
 
+addons:
+  sonarcloud:
+    organization: "alex-dow-github"
+    token:
+      secure: bc95a77f571eda95ccf20df4df8df623832e5154
+
+
 install:
   - pip install tox
 script:

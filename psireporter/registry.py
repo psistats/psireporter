@@ -2,9 +2,11 @@ class RegistryError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
+
 class RegistryDuplicateError(RegistryError):
     def __init__(self, message):
         super().__init__(message)
+
 
 class RegistryKeyError(RegistryError):
     def __init__(self, message):
@@ -30,6 +32,11 @@ class Registry():
             if entryName not in self._entries:
                 raise RegistryKeyError("Entry %s does not exist" % entryName)
             return self._entries[entryName]
+
+        def has(self, entryName):
+            if entryName not in self._entries:
+                return False
+            return True
 
         def entries(self):
             return tuple(self._entries.items())
@@ -69,6 +76,10 @@ class Registry():
         reg.clear()
 
     @staticmethod
+    def HasEntry(regname, entryName):
+        reg = Registry.GetRegistry(regname)
+        return reg.has(entryName)
+
+    @staticmethod
     def ClearAll():
         Registry.__instances = {}
-

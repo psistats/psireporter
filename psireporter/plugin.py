@@ -3,79 +3,27 @@ from datetime import datetime
 import calendar
 from psireporter.registry import Registry
 
-class PluginError(Exception):
-    def __init__(self, message):
-        super().__init__(message)
 
-class OutputterPlugin(type):
-    def __init__(cls, name, bases, namespaces):
-        super(OutputterPlugin, cls).__init__(name, bases, namespaces)
-        Registry.SetEntry("outputters", cls.ID, cls)
+class PluginMeta(type):
+    def __init__(cls, pluginType, name, bases, namespaces):
+        super(PluginMeta, cls).__init__(name, bases, namespaces)
 
-
-class ReporterPlugin(type):
-    def __init__(cls, name, bases, namespaces):
-
-        if not hasattr(cls, "ID"):
-            raise PluginError("Missing class attribute ID")
-
-        if not hasattr(cls, "report"):
-            raise PluginError("Reporter plugins must implement the method 'report'")
-
-        super(ReporterPlugin, cls).__init__(name, bases, namespaces)
-        Registry.SetEntry("reporters", cls.ID, cls)
-
-
-
-class Plugin():
-    """Base Plugin Class"""
-    pass
-
-
-class OutputPlugin(Plugin):
-    """Output Plugin Class
-
-    Extend this class for plugins that send reports"""
-
-    def __init__(self, config):
-        self.config = config
-
-    def send(self, report):
-        raise NotImplementedError
-
-
-class ReporterPlugin(Plugin):
-    """Report Plugin Class
-
-    Extend this class for plugins that generate reports"""
-
-    def __init__(self, config):
-        self.config = config
-
-    def report(self):
-        raise NotImplementedError()
-
-class PluginConfig():
-    def __init__(self, *args, **kwargs):
-        self._interval = kwargs.get('interval', 1)
-        self._enabled = kwargs.get('enabled', True)
-
-        if self._enabled == "true":
-            self._enabled = True
-        elif self._enabled == "false":
-            self._enabled = False
-
-        self._properties = {}
-
-        for propName in kwargs:
-            self._properties[propName] = kwargs.get(propName)
-
-
-    def __getattr__(self, k):
-        if k in self._properties:
-            return self._properties[k]
+        if not hasattr(cls, 'PLUGIN_ID'):
+            plugin_id = namespaces['__module__'] + '.' + namespaces['__qualname__']
         else:
-            raise AttributeError("%s is not defined" % k)
+            plugin_id = cls.PLUGIN_ID
+
+        Registry.SetEntry(pluginType, plugin_id, cls)
+
+
+class OutputPlugin(PluginMeta):
+    def __init__(cls, name, bases, namespaces):
+        super(OutputPlugin, cls).__init__("outputters", name, bases, namespaces)
+
+
+class ReporterPlugin(PluginMeta):
+    def __init__(cls, name, bases, namespaces):
+        super(ReporterPlugin, cls).__init__("reporters", name, bases, namespaces)
 
 
 class Report():
@@ -83,7 +31,7 @@ class Report():
     def __init__(self, *args, **kwargs):
         self._id = kwargs.get('id', None)
 
-        if self._id == None:
+        if self._id is None:
             self._id = str(uuid.uuid1())
 
         self._message = kwargs.get('message', None)

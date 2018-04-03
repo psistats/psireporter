@@ -1,18 +1,58 @@
-PsiReporter
-A framework for running regular reports
+#PsiReporter
+PsiReporter is a basic framework for task execution and broadcasting the results. It's designed for simplicity and small scale usage.
 
-This is a simple framework that solves the problem of wanting to output results of different pieces of code at different periodic intervals.
+## Usage
+```py
+from psireporter import OutputPlugin, ReporterPlugin, Manager
+import time
 
-There are two different types of plugins:
+class MyReporter(metaclass=ReporterPlugin):
+    def report(self):
+        return "this is a report"
 
-Reporters
+class MyOutputter(metaclass=OutputPlugin):
+    def send(self, report):
+        print("Sending report: ", report)
 
-Reporters create reports. Those reports can be anything you'd like.
+if __name__ == "__main__":
+    manager = Manager()
+    manager.start()
+    
+    while True:
+    	try:
+	    time.sleep(1) 
+	finally:
+	    break
 
-Senders
+    manager.stop()
+```
 
-Senders send reports somewhere. Store them in a database, print them to stdout, do fancy message queue stuff. Who knows.
+## Plugins
 
-Why?
+PsiReporter works with Reporter and Outputter plugins.
 
-Because I needed something like this for a project. Small and simple. No need to get into advanced task schedulers or anything complicated like that.
+### ReporterPlugin
+
+A Reporter plugin creates reports. 
+
+To create a reporter plugin:
+
+1. Create a class whose metaclass is `psireporter.ReporterPlugin`
+2. Implement the method `report(self, config)`
+3. Have this method return a value of some kind
+
+#### Example
+
+```py
+import psireporter
+
+class SimpleCounter(metaclass=psireporter.ReporterPlugin):
+    def __init__(self):
+        self.counter = 0
+        
+    def report(self, config):
+        self.counter += 1
+        return self.counter
+```
+
+### OutputterPlugin

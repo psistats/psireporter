@@ -1,49 +1,108 @@
 import threading
 import time
 import collections
-import asyncio
+import logging
+from psireporter.registry import Registry
 
-class ReporterWorker(threading.Thread):
 
-    def __init__(self, reporter, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class Manager(threading.Thread):
+    def __init__(self, config, *args, **kwargs):
+
+        self.logger = logging.getLogger(name='psireporter.manager')
+
         self.running = False
-        self.reporter = reporter
+        self.config = config
+        super().__init__(*args, **kwargs)
 
     def start(self):
         self.running = True
         super().start()
 
+    def stop(self):
+        self.running = False
+
     def run(self):
-        while (self.running):
-            time.sleep(self.reporter.config.interval)
+
+        self.logger.info('Start manager threads')
+        outputters = Registry.GetEntries('outputters')
+        reporters = Registry.GetEntries('reporters')
+
+        o_manager = OutputManager(outputters, self.config)
+        r_manager = ReporterManager(reporters, self.config, o_manager)
+
+        o_manager.start()
+        r_manager.start()
+
+        while self.running is True:
+            time.sleep(5)
+
+        o_manager.stop()
+        r_manager.stop()
+
+        self.logger.info('Stopped')
+
+
+class OutputWorker(threading.Thread):
+    def __init__(self, outputter, *args, **kwargs):
+        self.logger = logging.getLogger(name='psireporter.output-worker')
+        self.report_queue = collections.deque()
+        self.running = False
+        self.outputter = outputter
+        super().__init__(*args, **kwargs)
+
+    def start(self):
+        self.running = True
+        super().start()
 
     def stop(self):
         self.running = False
 
-class OutputManager(threading.Thread):
-    """Output Manager
+    def add_report(self, report):
+        self.report_queue.append(report)
 
-    Manages output threads."""
-    def __init__(self, outputters, *args, **kwargs):
+    def run(self):
+
+        while self.running is True:
+            if len(self.report_queue) > 0:
+                report = self.report_queue.popleft()
+                self.outputter.send(report)
+            else:
+                time.sleep(1)
+
+        self.logger.info(self.outputter.__class__.__name__ + ' stopped')
+
+
+class OutputManager(threading.Thread):
+    def __init__(self, outputters, config, *args, **kwargs):
+        self.logger = logging.getLogger(name='psireporter.output-manager')
+        self._workers = []
+
+        if config is None:
+            self.config = {
+                "outputters": {}
+            }
+
+        for outputter_id, outputter in outputters:
+            self._workers.append(OutputWorker(outputter()))
+
         super().__init__(*args, **kwargs)
 
-        self.running = False
-        self._workers = []
-        self._reports = collections.deque()
-        self.outputters = outputters
-
-    def start(self, *args, **kwargs):
-
-        for outputter in self.outputters:
-            self._workers.append(OutputWorker(outputter))
-
+    def start(self):
         self.running = True
+        super().start()
 
-        super().start(*args, **kwargs)
+    def stop(self):
+        self.running = False
 
     def add_report(self, report):
-        self._reports.append(report)
+        for worker in self._workers:
+            worker.add_report(report)
+
+    def has_running_workers(self):
+        for worker in self._workers:
+            if worker.running is True:
+                return True
+        return False
 
     def run(self):
 
@@ -51,52 +110,107 @@ class OutputManager(threading.Thread):
             worker.start()
 
         while self.running is True:
-            if len(self._reports) > 0:
-                report = self._reports.popleft()
-                for worker in self._workers:
-                    worker.add_report(report)
-                time.sleep(0.01)
-            else:
-                time.sleep(5)
+            time.sleep(10)
 
         for worker in self._workers:
             worker.stop()
 
-    def stop(self):
+        while self.has_running_workers():
+            time.sleep(10)
+
+        self.logger.info('Stopped')
+
+
+class ReporterManager(threading.Thread):
+
+    def __init__(self, reporters, config, o_manager, *args, **kwargs):
+
+        self.logger = logging.getLogger('psireporter.reporter-manager')
+
+        if config is None:
+            self.config = {
+                "reporters": {}
+            }
+        else:
+            self.config = config
+
         self.running = False
+        self._o_manager = o_manager
 
+        self._reporter_counter = 0
+        self._max_reporter_counter = 0
 
-class OutputWorker(threading.Thread):
-    """Output Worker
+        self._reporters = {}
+        self._outputters = {}
+        self._triggers = {}
+        self._counter = 1
 
-    Runs an outputter plugin in a thread"""
-    def __init__(self, outputter, *args, **kwargs):
+        for reporter_id, reporter in reporters:
+            self._reporters[reporter_id] = reporter()
+
+            if reporter_id not in self.config["reporters"]:
+                self.config["reporters"][reporter_id] = {
+                    'interval': 1,
+                    'settings': {}
+                }
+            else:
+                if 'interval' not in self.config['reporters'][reporter_id]:
+                    self.config['reporters'][reporter_id]['interval'] = 1
+
+                if 'settings' not in self.config['reporters'][reporter_id]:
+                    self.config['reporters'][reporter_id]['settings'] = {}
+
+            interval = self.config['reporters'][reporter_id]['interval']
+
+            if interval not in self._triggers:
+                self._triggers[interval] = []
+
+            self._triggers[interval].append(reporter_id)
+
+        self._max_reporter_counter = max(self._triggers.keys())
+
+        self._trigger_counters = self._triggers.keys()
+
         super().__init__(*args, **kwargs)
-        self.running = False
-        self.config = {}
-        self.outputter = outputter
-        self._reports = collections.deque()
-
-
-    def add_report(self, report):
-        self._reports.append(report)
-
 
     def start(self):
         self.running = True
         super().start()
 
-
-    def run(self):
-        while self.running is True:
-            if (len(self._reports) >= 1):
-                report = self._reports.popleft()
-                self.outputter.send(report)
-            else:
-                time.sleep(1)
-
-        print("Outputter worker thread finished")
-
-
     def stop(self):
         self.running = False
+
+    def run(self):
+
+        self.logger.info('Starting')
+        self.logger.debug('Max counter: %s' % self._max_reporter_counter)
+        self.logger.debug('Triggers: %s' % self._triggers)
+
+        while self.running is True:
+            if self._counter > self._max_reporter_counter:
+                self._counter = 1
+
+            for counter in self._trigger_counters:
+                if self._counter % counter == 0:
+                    for reporter_id in self._triggers[counter]:
+                        reporter = self._reporters[reporter_id]
+                        report = reporter.report(None)
+                        self._o_manager.add_report(report)
+
+
+            """
+            self.logger.debug('Current counter: %s' % self._counter)
+
+            if self._counter in self._triggers:
+                self.logger.debug('Triggering %s reports' % len(self._triggers[self._counter]))
+                for reporter_id in self._triggers[self._counter]:
+                    reporter = self._reporters[reporter_id]
+
+                    report = reporter.report(None)
+
+                    self._o_manager.add_report(report)
+            """
+            self._counter += 1
+            time.sleep(1)
+
+        self.logger.info('Stopped')
