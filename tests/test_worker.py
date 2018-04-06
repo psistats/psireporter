@@ -20,11 +20,18 @@ def test_sends_report():
 def test_output_manager():
 
     class TestOutput():
+
+        def __init__(self, config):
+            pass
+
         def send(self, report):
             self.report = report
 
 
     class TestOutputTwo():
+        def __init__(self, config):
+            pass
+
         def send(self, report):
             self.report = report
 
@@ -39,6 +46,46 @@ def test_output_manager():
     for w in om._workers:
         w.tick()
         assert w.outputter.report == 'test report'
+
+
+def test_disabled_outputters():
+
+    class EnabledOutputter():
+        PLUGIN_ID = 'enabled-output'
+
+        def __init__(self, config):
+            self.reports = []
+
+        def send(self, report):
+            self.reports.append(report)
+
+    class DisabledOutputter():
+        PLUGIN_ID = 'disabled-output'
+
+        def __init__(self, config):
+            self.reports = []
+
+        def send(self, report):
+            self.reports.append(report)
+
+
+    config = {
+        'disabled-output': { 'enabled': False }
+    }
+
+    om = OutputManager((
+        ('enabled-output', EnabledOutputter),
+        ('disabled-output', DisabledOutputter)
+    ), config)
+
+    om.add_report('test report')
+
+    assert len(om._workers) is 1
+
+    for w in om._workers:
+        w.tick()
+
+    assert om._workers[0].outputter.reports[0] is 'test report'
 
 
 def test_disabled_reporters():

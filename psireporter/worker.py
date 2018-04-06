@@ -140,8 +140,25 @@ class OutputManager(threading.Thread):
         for outputter_id, outputter in outputters:
 
             if outputter_id not in self.config:
-                pass
-            self._workers.append(OutputWorker(outputter()))
+                self.config[outputter_id] = {
+                    'enabled': True,
+                    'settings': {}
+                }
+            else:
+                if 'enabled' not in self.config[outputter_id]:
+                    self.config[outputter_id]['enabled'] = True
+
+                if 'settings' not in self.config[outputter_id]:
+                    self.config[outputter_id]['settings'] = {}
+
+            if self.config[outputter_id]['enabled'] is not False:
+
+                print('OUTPUTTER:', outputter)
+
+                plugin = outputter(self.config[outputter_id]['settings'])
+                ow = OutputWorker(plugin)
+
+                self._workers.append(ow)
 
         super().__init__(*args, **kwargs)
 
