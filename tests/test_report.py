@@ -4,6 +4,7 @@ import uuid
 from unittest import mock
 import datetime
 
+
 def test_reportMutations():
     report = Report(message="foobar")
 
@@ -24,6 +25,7 @@ def test_idGeneration():
 
     assert str(id) == report.id
 
+
 def test_timestamp():
 
     testdt = datetime.datetime(2016, 1, 1, 1, 1, 0, 0)
@@ -34,6 +36,7 @@ def test_timestamp():
 
         assert report.timestamp == 1451610060
 
+
 def test_settingValues():
 
     testdt = datetime.datetime(2016, 1, 1, 1, 1, 0, 0)
@@ -41,11 +44,13 @@ def test_settingValues():
     with mock.patch('psireporter.worker.datetime') as dt_mock:
         dt_mock.utcnow.return_value = testdt
 
-        report = Report(id="foo-id", message="foo-message")
+        report = Report(id="foo-id", message="foo-message", sender='my sender')
 
         assert report.id == "foo-id"
         assert report.message == "foo-message"
         assert report.timestamp == 1451610060
+        assert report.sender == 'my sender'
+
 
 def test_properDict():
 
@@ -54,12 +59,13 @@ def test_properDict():
     with mock.patch('psireporter.worker.datetime') as dt_mock:
         dt_mock.utcnow.return_value = testdt
 
-        report = Report(id='test', message='test')
+        report = Report(id='test', message='test', sender='my sender')
 
         report_dict = dict(report)
 
         assert report_dict['id'] == 'test'
         assert report_dict['message'] == 'test'
         assert report_dict['timestamp'] == 1451610060
+        assert report_dict['sender'] == 'my sender'
 
 

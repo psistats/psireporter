@@ -6,10 +6,21 @@ from datetime import datetime
 import uuid
 import calendar
 from psireporter.registry import Registry
-import json
 
-class Report():
 
+class Report(tuple):
+
+    __slots__ = []
+
+    def __new__(cls, **kwargs):
+        return tuple.__new__(cls, (
+            kwargs.get('id', str(uuid.uuid1())),
+            kwargs.get('message', None),
+            kwargs.get('sender', None),
+            calendar.timegm(datetime.utcnow().utctimetuple())
+        ))
+
+    """
     def __init__(self, **kwargs):
         self._id = kwargs.get('id', None)
 
@@ -17,26 +28,32 @@ class Report():
             self._id = str(uuid.uuid1())
 
         self._message = kwargs.get('message', None)
+        self._sender = kwargs.get('sender', None)
 
         d = datetime.utcnow()
         unixtime = calendar.timegm(d.utctimetuple())
         self._timestamp = unixtime
+    """
 
     @property
     def id(self):
-        return self._id
+        return tuple.__getitem__(self, 0)
 
     @property
     def message(self):
-        return self._message
+        return tuple.__getitem__(self, 1)
 
     @property
     def timestamp(self):
-        return self._timestamp
+        return tuple.__getitem__(self, 3)
+
+    @property
+    def sender(self):
+        return tuple.__getitem__(self, 2)
 
     def __iter__(self):
-        for key in ['id', 'timestamp', 'message']:
-            yield (key, self.__dict__['_' + key])
+        for key in ['id', 'timestamp', 'message', 'sender']:
+            yield (key, getattr(self, key))
 
 
 
@@ -228,7 +245,7 @@ class ReporterManager(threading.Thread):
                     reporter = self._reporters[reporter_id]
                     message = reporter.report(None)
 
-                    report = Report(id=reporter_id, message=message)
+                    report = Report(message=message, sender=reporter_id)
 
                     self._o_manager.add_report(report)
         self._counter += 1
