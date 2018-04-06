@@ -13,7 +13,7 @@ logger.addHandler(ch)
 
 class FastCounter(metaclass=ReporterPlugin):
 
-    PLUGIN_ID = 'fast-counter',
+    PLUGIN_ID = 'fast-counter'
 
     def __init__(self):
         self.counter = 0
@@ -44,7 +44,7 @@ class Printer(metaclass=OutputPlugin):
         self.logger = logging.getLogger('printer')
 
     def send(self, report):
-        self.logger.info('Report: %s' % report)
+        self.logger.info('Report: %s' % dict(report))
 
 
 manager = Manager({

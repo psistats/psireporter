@@ -34,15 +34,9 @@ class Report():
     def timestamp(self):
         return self._timestamp
 
-    def __str__(self):
-        return 'RID: %s - TS: %s - MSG: %s' % (self._id, self._message, self._timestamp)
-
-    def __repr__(self):
-        return json.dumps({
-            'id': self._id,
-            'ts': self._timestamp,
-            'msg': self._message
-        })
+    def __iter__(self):
+        for key in ['id', 'timestamp', 'message']:
+            yield (key, self.__dict__['_' + key])
 
 
 
@@ -228,15 +222,15 @@ class ReporterManager(threading.Thread):
         if self._counter > self._max_reporter_counter:
             self._counter = 1
 
-            for counter in self._trigger_counters:
-                if self._counter % counter == 0:
-                    for reporter_id in self._triggers[counter]:
-                        reporter = self._reporters[reporter_id]
-                        message = reporter.report(None)
+        for counter in self._trigger_counters:
+            if self._counter % counter == 0:
+                for reporter_id in self._triggers[counter]:
+                    reporter = self._reporters[reporter_id]
+                    message = reporter.report(None)
 
-                        report = Report(id=reporter_id, message=message)
+                    report = Report(id=reporter_id, message=message)
 
-                        self._o_manager.add_report(report)
+                    self._o_manager.add_report(report)
         self._counter += 1
         time.sleep(1)
 
