@@ -16,8 +16,6 @@ class PluginMeta(type):
 
         instance = type.__call__(cls, *args, **kwargs)
 
-        print('instance?', instance)
-
         if config is None:
             setattr(instance, 'config', {})
         else:
