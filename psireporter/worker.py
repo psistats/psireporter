@@ -20,21 +20,6 @@ class Report(tuple):
             calendar.timegm(datetime.utcnow().utctimetuple())
         ))
 
-    """
-    def __init__(self, **kwargs):
-        self._id = kwargs.get('id', None)
-
-        if self._id is None:
-            self._id = str(uuid.uuid1())
-
-        self._message = kwargs.get('message', None)
-        self._sender = kwargs.get('sender', None)
-
-        d = datetime.utcnow()
-        unixtime = calendar.timegm(d.utctimetuple())
-        self._timestamp = unixtime
-    """
-
     @property
     def id(self):
         return tuple.__getitem__(self, 0)
@@ -58,7 +43,7 @@ class Report(tuple):
 
 
 class Manager(threading.Thread):
-    def __init__(self, config, *args, **kwargs):
+    def __init__(self, config=None, *args, **kwargs):
 
         self.logger = logging.getLogger(name='psireporter.manager')
 
@@ -67,36 +52,42 @@ class Manager(threading.Thread):
         super().__init__(*args, **kwargs)
 
     def start(self):
+        self.logger.debug('Starting...')
         self.running = True
         super().start()
 
     def stop(self):
+        self.logger.debug('Stopping...')
         self.running = False
 
     def run(self):
 
-        self.logger.info('Start manager threads')
+        self.logger.debug('Start manager threads')
         outputters = Registry.GetEntries('outputters')
         reporters = Registry.GetEntries('reporters')
 
         o_manager = OutputManager(outputters, self.config)
-        r_manager = ReporterManager(reporters, self.config, o_manager)
+        r_manager = ReporterManager(reporters, o_manager, self.config)
 
         o_manager.start()
         r_manager.start()
 
+        self.logger.debug('Started')
         while self.running is True:
             time.sleep(5)
 
         o_manager.stop()
         r_manager.stop()
 
-        self.logger.info('Stopped')
+        self.logger.debug('Stopped')
 
 
 class OutputWorker(threading.Thread):
     def __init__(self, outputter, *args, **kwargs):
-        self.logger = logging.getLogger(name='psireporter.output-worker')
+
+        logName = 'psireporter.output-worker' + outputter.__class__.__name__
+
+        self.logger = logging.getLogger(name=logName)
         self.report_queue = collections.deque()
         self.running = False
         self.outputter = outputter
@@ -104,9 +95,11 @@ class OutputWorker(threading.Thread):
 
     def start(self):
         self.running = True
+        self.logger.debug('Starting...')
         super().start()
 
     def stop(self):
+        self.logger.debug('Stopping...')
         self.running = False
 
     def add_report(self, report):
@@ -121,14 +114,16 @@ class OutputWorker(threading.Thread):
 
     def run(self):
 
+        self.logger.debug('Started')
+
         while self.running is True:
             self.tick()
 
-        self.logger.info(self.outputter.__class__.__name__ + ' stopped')
+        self.logger.debug('Stopped')
 
 
 class OutputManager(threading.Thread):
-    def __init__(self, outputters, config, *args, **kwargs):
+    def __init__(self, outputters, config=None, *args, **kwargs):
         self.logger = logging.getLogger(name='psireporter.output-manager')
         self._workers = []
 
@@ -143,10 +138,12 @@ class OutputManager(threading.Thread):
         super().__init__(*args, **kwargs)
 
     def start(self):
+        self.logger.debug('Starting...')
         self.running = True
         super().start()
 
     def stop(self):
+        self.logger.debug('Stopping...')
         self.running = False
 
     def add_report(self, report):
@@ -164,6 +161,8 @@ class OutputManager(threading.Thread):
         for worker in self._workers:
             worker.start()
 
+        self.logger.debug('Started')
+
         while self.running is True:
             time.sleep(10)
 
@@ -173,12 +172,12 @@ class OutputManager(threading.Thread):
         while self.has_running_workers():
             time.sleep(10)
 
-        self.logger.info('Stopped')
+        self.logger.debug('Stopped')
 
 
 class ReporterManager(threading.Thread):
 
-    def __init__(self, reporters, config, o_manager, *args, **kwargs):
+    def __init__(self, reporters, o_manager, config=None, *args, **kwargs):
 
         self.logger = logging.getLogger('psireporter.reporter-manager')
 
@@ -229,10 +228,12 @@ class ReporterManager(threading.Thread):
         super().__init__(*args, **kwargs)
 
     def start(self):
+        self.logger.debug('Starting...')
         self.running = True
         super().start()
 
     def stop(self):
+        self.logger.debug('Stopping...')
         self.running = False
 
     def tick(self):
@@ -249,15 +250,11 @@ class ReporterManager(threading.Thread):
 
                     self._o_manager.add_report(report)
         self._counter += 1
-        time.sleep(1)
 
     def run(self):
-
-        self.logger.info('Starting')
-        self.logger.debug('Max counter: %s' % self._max_reporter_counter)
-        self.logger.debug('Triggers: %s' % self._triggers)
-
+        self.logger.debug('Started')
         while self.running is True:
             self.tick()
+            time.sleep(1)
 
-        self.logger.info('Stopped')
+        self.logger.debug('Stopped')
