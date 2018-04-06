@@ -1,4 +1,4 @@
-from psireporter.plugin import Report
+from psireporter.worker import Report
 import pytest
 import uuid
 from unittest import mock

@@ -2,7 +2,48 @@ import threading
 import time
 import collections
 import logging
+from datetime import datetime
+import uuid
+import calendar
 from psireporter.registry import Registry
+import json
+
+class Report():
+
+    def __init__(self, **kwargs):
+        self._id = kwargs.get('id', None)
+
+        if self._id is None:
+            self._id = str(uuid.uuid1())
+
+        self._message = kwargs.get('message', None)
+
+        d = datetime.utcnow()
+        unixtime = calendar.timegm(d.utctimetuple())
+        self._timestamp = unixtime
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def message(self):
+        return self._message
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    def __str__(self):
+        return 'RID: %s - TS: %s - MSG: %s' % (self._id, self._message, self._timestamp)
+
+    def __repr__(self):
+        return json.dumps({
+            'id': self._id,
+            'ts': self._timestamp,
+            'msg': self._message
+        })
+
 
 
 class Manager(threading.Thread):
@@ -60,14 +101,17 @@ class OutputWorker(threading.Thread):
     def add_report(self, report):
         self.report_queue.append(report)
 
+    def tick(self):
+        if len(self.report_queue) > 0:
+            report = self.report_queue.popleft()
+            self.outputter.send(report)
+        else:
+            time.sleep(1)
+
     def run(self):
 
         while self.running is True:
-            if len(self.report_queue) > 0:
-                report = self.report_queue.popleft()
-                self.outputter.send(report)
-            else:
-                time.sleep(1)
+            self.tick()
 
         self.logger.info(self.outputter.__class__.__name__ + ' stopped')
 
@@ -180,6 +224,22 @@ class ReporterManager(threading.Thread):
     def stop(self):
         self.running = False
 
+    def tick(self):
+        if self._counter > self._max_reporter_counter:
+            self._counter = 1
+
+            for counter in self._trigger_counters:
+                if self._counter % counter == 0:
+                    for reporter_id in self._triggers[counter]:
+                        reporter = self._reporters[reporter_id]
+                        message = reporter.report(None)
+
+                        report = Report(id=reporter_id, message=message)
+
+                        self._o_manager.add_report(report)
+        self._counter += 1
+        time.sleep(1)
+
     def run(self):
 
         self.logger.info('Starting')
@@ -187,30 +247,6 @@ class ReporterManager(threading.Thread):
         self.logger.debug('Triggers: %s' % self._triggers)
 
         while self.running is True:
-            if self._counter > self._max_reporter_counter:
-                self._counter = 1
-
-            for counter in self._trigger_counters:
-                if self._counter % counter == 0:
-                    for reporter_id in self._triggers[counter]:
-                        reporter = self._reporters[reporter_id]
-                        report = reporter.report(None)
-                        self._o_manager.add_report(report)
-
-
-            """
-            self.logger.debug('Current counter: %s' % self._counter)
-
-            if self._counter in self._triggers:
-                self.logger.debug('Triggering %s reports' % len(self._triggers[self._counter]))
-                for reporter_id in self._triggers[self._counter]:
-                    reporter = self._reporters[reporter_id]
-
-                    report = reporter.report(None)
-
-                    self._o_manager.add_report(report)
-            """
-            self._counter += 1
-            time.sleep(1)
+            self.tick()
 
         self.logger.info('Stopped')
