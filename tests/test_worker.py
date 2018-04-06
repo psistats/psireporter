@@ -1,6 +1,5 @@
 from psireporter.worker import OutputWorker, OutputManager, ReporterManager
 
-
 def test_sends_report():
 
     class TestOutput():
@@ -21,11 +20,18 @@ def test_sends_report():
 def test_output_manager():
 
     class TestOutput():
+
+        def __init__(self, config):
+            pass
+
         def send(self, report):
             self.report = report
 
 
     class TestOutputTwo():
+        def __init__(self, config):
+            pass
+
         def send(self, report):
             self.report = report
 
@@ -42,17 +48,117 @@ def test_output_manager():
         assert w.outputter.report == 'test report'
 
 
+def test_disabled_outputters():
+
+    class EnabledOutputter():
+        PLUGIN_ID = 'enabled-output'
+
+        def __init__(self, config):
+            self.reports = []
+
+        def send(self, report):
+            self.reports.append(report)
+
+    class DisabledOutputter():
+        PLUGIN_ID = 'disabled-output'
+
+        def __init__(self, config):
+            self.reports = []
+
+        def send(self, report):
+            self.reports.append(report)
+
+
+    config = {
+        'disabled-output': { 'enabled': False }
+    }
+
+    om = OutputManager((
+        ('enabled-output', EnabledOutputter),
+        ('disabled-output', DisabledOutputter)
+    ), config)
+
+    om.add_report('test report')
+
+    assert len(om._workers) is 1
+
+    for w in om._workers:
+        w.tick()
+
+    assert om._workers[0].outputter.reports[0] is 'test report'
+
+
+def test_disabled_reporters():
+
+    class ReporterOne():
+
+        PLUGIN_ID = 'report-one'
+
+        def __init__(self, config):
+            pass
+
+        def report(self):
+            return 'enabled report'
+
+    class ReporterTwo():
+
+        PLUGIN_ID = 'report-two'
+
+        def __init__(self, config):
+            pass
+
+        def report(self):
+            return 'disabled report'
+
+
+    class MockOutputManager():
+        def __init__(self):
+            self.reports = []
+
+        def add_report(self, report):
+            self.reports.append(report)
+
+    config = {
+        'report-one': {
+            'interval': 1
+        },
+        'report-two': {
+            'interval': 1,
+            'enabled': False
+        }
+    }
+
+    om = MockOutputManager()
+
+    reports = (
+        ('report-one', ReporterOne),
+        ('report-two', ReporterTwo)
+    )
+
+    rm = ReporterManager(reports, om, config)
+
+    rm.tick()
+
+    assert om.reports[0].message == 'enabled report'
+    assert len(om.reports) == 1
+
+
 def test_reporter_manager():
 
     class ReporterOne():
-        def report(self, config):
+        def __init__(self, config):
+            pass
+
+        def report(self):
             return 'report one'
 
 
     class ReporterTwo():
-        def report(self, config):
-            return 'report two'
+        def __init__(self, config):
+            pass
 
+        def report(self):
+            return 'report two'
 
     class Outputter():
         def send(self, report):
@@ -68,10 +174,8 @@ def test_reporter_manager():
 
 
     config = {
-        'reporters': {
-            'reporter-two': {
-                'interval': 3
-            }
+        'reporter-two': {
+            'interval': 3
         }
     }
 

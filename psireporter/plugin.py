@@ -1,6 +1,3 @@
-import uuid
-from datetime import datetime
-import calendar
 from psireporter.registry import Registry
 
 
@@ -14,6 +11,17 @@ class PluginMeta(type):
             plugin_id = cls.PLUGIN_ID
 
         Registry.SetEntry(pluginType, plugin_id, cls)
+
+    def __call__(cls, config=None, *args, **kwargs):
+
+        instance = type.__call__(cls, *args, **kwargs)
+
+        if config is None:
+            setattr(instance, 'config', {})
+        else:
+            setattr(instance, 'config', config)
+
+        return instance
 
 
 class OutputPlugin(PluginMeta):

@@ -18,7 +18,7 @@ class FastCounter(metaclass=ReporterPlugin):
     def __init__(self):
         self.counter = 0
 
-    def report(self, config):
+    def report(self):
         self.counter += 1
 
         return 'fast count: %s' % self.counter
@@ -31,7 +31,7 @@ class SlowCounter(metaclass=ReporterPlugin):
     def __init__(self):
         self.counter = 0
 
-    def report(self, config):
+    def report(self):
         self.counter += 1
 
         return 'slow count: %s' % self.counter
