@@ -1,6 +1,5 @@
 from psireporter.worker import OutputWorker, OutputManager, ReporterManager
 
-
 def test_sends_report():
 
     class TestOutput():
@@ -45,12 +44,18 @@ def test_output_manager():
 def test_reporter_manager():
 
     class ReporterOne():
-        def report(self, config):
+        def __init__(self, config):
+            pass
+
+        def report(self):
             return 'report one'
 
 
     class ReporterTwo():
-        def report(self, config):
+        def __init__(self, config):
+            pass
+
+        def report(self):
             return 'report two'
 
 
@@ -68,10 +73,8 @@ def test_reporter_manager():
 
 
     config = {
-        'reporters': {
-            'reporter-two': {
-                'interval': 3
-            }
+        'reporter-two': {
+            'interval': 3
         }
     }
 

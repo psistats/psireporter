@@ -48,7 +48,12 @@ class Manager(threading.Thread):
         self.logger = logging.getLogger(name='psireporter.manager')
 
         self.running = False
-        self.config = config
+
+        if config is None:
+            self.config = {}
+        else:
+            self.config = config
+
         super().__init__(*args, **kwargs)
 
     def start(self):
@@ -66,8 +71,8 @@ class Manager(threading.Thread):
         outputters = Registry.GetEntries('outputters')
         reporters = Registry.GetEntries('reporters')
 
-        o_manager = OutputManager(outputters, self.config)
-        r_manager = ReporterManager(reporters, o_manager, self.config)
+        o_manager = OutputManager(outputters, self.config.get('outputters', {}))
+        r_manager = ReporterManager(reporters, o_manager, self.config.get('reporters', {}))
 
         o_manager.start()
         r_manager.start()
@@ -128,11 +133,14 @@ class OutputManager(threading.Thread):
         self._workers = []
 
         if config is None:
-            self.config = {
-                "outputters": {}
-            }
+            self.config = {}
+        else:
+            self.config = config
 
         for outputter_id, outputter in outputters:
+
+            if outputter_id not in self.config:
+                pass
             self._workers.append(OutputWorker(outputter()))
 
         super().__init__(*args, **kwargs)
@@ -182,9 +190,7 @@ class ReporterManager(threading.Thread):
         self.logger = logging.getLogger('psireporter.reporter-manager')
 
         if config is None:
-            self.config = {
-                "reporters": {}
-            }
+            self.config = {}
         else:
             self.config = config
 
@@ -200,26 +206,33 @@ class ReporterManager(threading.Thread):
         self._counter = 1
 
         for reporter_id, reporter in reporters:
-            self._reporters[reporter_id] = reporter()
 
-            if reporter_id not in self.config["reporters"]:
-                self.config["reporters"][reporter_id] = {
+            if reporter_id not in self.config:
+                self.config[reporter_id] = {
                     'interval': 1,
+                    'enabled': True,
                     'settings': {}
                 }
             else:
-                if 'interval' not in self.config['reporters'][reporter_id]:
-                    self.config['reporters'][reporter_id]['interval'] = 1
+                if 'interval' not in self.config[reporter_id]:
+                    self.config[reporter_id]['interval'] = 1
 
-                if 'settings' not in self.config['reporters'][reporter_id]:
-                    self.config['reporters'][reporter_id]['settings'] = {}
+                if 'settings' not in self.config[reporter_id]:
+                    self.config[reporter_id]['settings'] = {}
 
-            interval = self.config['reporters'][reporter_id]['interval']
+                if 'enabled' not in self.config[reporter_id]:
+                    self.config[reporter_id]['enabled'] = True
 
-            if interval not in self._triggers:
-                self._triggers[interval] = []
+            if self.config[reporter_id]['enabled'] is not False:
 
-            self._triggers[interval].append(reporter_id)
+                self._reporters[reporter_id] = reporter(self.config[reporter_id]['settings'])
+
+                interval = self.config[reporter_id]['interval']
+
+                if interval not in self._triggers:
+                    self._triggers[interval] = []
+
+                self._triggers[interval].append(reporter_id)
 
         self._max_reporter_counter = max(self._triggers.keys())
 
@@ -244,7 +257,7 @@ class ReporterManager(threading.Thread):
             if self._counter % counter == 0:
                 for reporter_id in self._triggers[counter]:
                     reporter = self._reporters[reporter_id]
-                    message = reporter.report(None)
+                    message = reporter.report()
 
                     report = Report(message=message, sender=reporter_id)
 

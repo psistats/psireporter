@@ -35,3 +35,22 @@ def test_outputer_plugin():
 
     nonIdOutputter = [o for o in Registry.GetEntries('outputters') if o[0].endswith('TestOutputter')]
     assert len(nonIdOutputter) is 1
+
+def test_outputter_config():
+
+    class TestOutputter(metaclass=OutputPlugin):
+        pass
+
+    to = TestOutputter()
+
+    assert to.config == {}
+
+
+def test_reporter_config():
+
+    class TestReporter(metaclass=ReporterPlugin):
+        pass
+
+    tr = TestReporter()
+
+    assert tr.config == {}
