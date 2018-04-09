@@ -188,27 +188,52 @@ def test_reporter_manager():
 
     rm = ReporterManager(reporters, om, config)
 
-    rm.tick()
-    rm.tick()
+    # first tick, get  messages from each reporter
     rm.tick()
 
-    assert rm._counter == 4
+    assert len(om.reports) is 2
 
     assert om.reports[0].message == 'report one'
     assert om.reports[0].sender == 'reporter-one'
 
-    assert om.reports[1].message == 'report one'
-    assert om.reports[1].sender == 'reporter-one'
+    assert om.reports[1].message == 'report two'
+    assert om.reports[1].sender == 'reporter-two'
 
+    # second tick, get messages from first reporter
+    rm.tick()
+
+    assert len(om.reports) == 3
     assert om.reports[2].message == 'report one'
     assert om.reports[2].sender == 'reporter-one'
 
-    assert om.reports[3].message == 'report two'
-    assert om.reports[3].sender == 'reporter-two'
-
+    # third tick, get messages from all reporters
     rm.tick()
 
-    assert rm._counter == 2
-    assert om.reports[4].message == 'report one'
-    assert om.reports[4].sender == 'reporter-one'
+    assert len(om.reports) == 5
+    assert om.reports[3].message == 'report one'
+    assert om.reports[3].sender == 'reporter-one'
+    assert om.reports[4].message == 'report two'
+    assert om.reports[4].sender == 'reporter-two'
+
+    # fourth tick, get messages from first reporter
+    rm.tick()
+
+    assert len(om.reports) == 6
+    assert om.reports[5].message == 'report one'
+    assert om.reports[5].sender == 'reporter-one'
+
+    # fifth tick, get messages from first reporter
+    rm.tick()
+    assert len(om.reports) == 7
+    assert om.reports[6].message == 'report one'
+    assert om.reports[6].sender == 'reporter-one'
+
+    # sixth tick, get messages from all reporters
+    rm.tick()
+    assert len(om.reports) == 9
+    assert om.reports[7].message == 'report one'
+    assert om.reports[7].sender == 'reporter-one'
+    assert om.reports[8].message == 'report two'
+    assert om.reports[8].sender == 'reporter-two'
+
 

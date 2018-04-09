@@ -1,19 +1,42 @@
 class RegistryError(Exception):
+    """Base exception class for registry errors"""
     def __init__(self, message):
         super().__init__(message)
 
 
 class RegistryDuplicateError(RegistryError):
+    """Raises when setting a key that already exists"""
     def __init__(self, message):
         super().__init__(message)
 
 
 class RegistryKeyError(RegistryError):
+    """Raised when accessing a key that does not exist"""
     def __init__(self, message):
         super().__init__(message)
 
 
 class Registry():
+    """Registry
+
+    The registry is a basic singleton to key/value pairs.
+
+    Values can be anything, including dictionaries and lists.
+
+    :Example:
+
+    Registry.SetEntry('root', 'foo', 'bar')
+    Registry.GetEntry('root', 'foo')
+
+    You can also get a registry for a specific name:
+
+    :Example:
+
+    reg = Registry.GetRegisry('root')
+    reg.set('foo', 'bar')
+    reg.get('foo')
+
+    """
     class __Registry():
         def __init__(self, regname):
             self._regname = regname
@@ -50,36 +73,43 @@ class Registry():
         raise RegistryError("Can not instantiate registry directly, use Registry.Get(regname)")
 
     @staticmethod
-    def GetRegistry(regname):
-        if regname not in Registry.__instances:
-            Registry.__instances[regname] = Registry.__Registry(regname)
-        return Registry.__instances[regname]
+    def GetRegistry(registry_name):
+        """Get a registry for the specific registry name"""
+        if registry_name not in Registry.__instances:
+            Registry.__instances[registry_name] = Registry.__Registry(registry_name)
+        return Registry.__instances[registry_name]
 
     @staticmethod
-    def GetEntry(regname, entryName):
-        reg = Registry.GetRegistry(regname)
-        return reg.get(entryName)
+    def GetEntry(registry_name, entry):
+        """Get an entry for a specific registry"""
+        reg = Registry.GetRegistry(registry_name)
+        return reg.get(entry)
 
     @staticmethod
-    def SetEntry(regname, entryName, entry):
-        reg = Registry.GetRegistry(regname)
-        reg.set(entryName, entry)
+    def SetEntry(registry_name, entry, value):
+        """Set an entry for a specific registry"""
+        reg = Registry.GetRegistry(registry_name)
+        reg.set(entry, value)
 
     @staticmethod
-    def GetEntries(regname):
-        reg = Registry.GetRegistry(regname)
+    def GetEntries(registry_name):
+        """Get all entries of a specific registry"""
+        reg = Registry.GetRegistry(registry_name)
         return reg.entries()
 
     @staticmethod
-    def Clear(regname):
-        reg = Registry.GetRegistry(regname)
+    def Clear(registry_name):
+        """Clear all entries of a specific registry"""
+        reg = Registry.GetRegistry(registry_name)
         reg.clear()
 
     @staticmethod
-    def HasEntry(regname, entryName):
-        reg = Registry.GetRegistry(regname)
-        return reg.has(entryName)
+    def HasEntry(registry_name, entry):
+        """Check to see if an entry exists in a specific registry"""
+        reg = Registry.GetRegistry(registry_name)
+        return reg.has(entry)
 
     @staticmethod
     def ClearAll():
+        """Deletes ALL existing registries"""
         Registry.__instances = {}

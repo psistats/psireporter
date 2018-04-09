@@ -15,16 +15,16 @@ class MyOutputter(metaclass=OutputPlugin):
         print("Sending report: ", report)
 
 if __name__ == "__main__":
-    manager = Manager()
-    manager.start()
+  manager = Manager()
+  manager.start()
     
-    while True:
-    	try:
+  while True:
+    try:
 	    time.sleep(1) 
-	finally:
+  	finally:
 	    break
 
-    manager.stop()
+  manager.stop()
 ```
 
 ## Plugins
@@ -38,7 +38,7 @@ A Reporter plugin creates reports.
 To create a reporter plugin:
 
 1. Create a class whose metaclass is `psireporter.ReporterPlugin`
-2. Implement the method `report(self, config)`
+2. Implement the method `report(self)`
 3. Have this method return a value of some kind
 
 #### Example
@@ -47,12 +47,33 @@ To create a reporter plugin:
 import psireporter
 
 class SimpleCounter(metaclass=psireporter.ReporterPlugin):
-    def __init__(self):
-        self.counter = 0
+  def __init__(self):
+    self.counter = 0
         
-    def report(self, config):
-        self.counter += 1
-        return self.counter
+  def report(self):
+    self.counter += 1
+    return self.counter
 ```
 
 ### OutputterPlugin
+
+An output plugin sends a report somewhere.
+
+To create an output plugin:
+
+1. Create a class whose metaclass is `psirpoerter.OutputPlugin`
+2. Implement the method `send(self, report)`
+
+#### Example
+
+```py
+import psireporter
+
+class SimplePrinter(metaclass=psireporter.ReporterPlugin):
+  def send(self, report):
+    print(dict(report))
+```
+
+### Report Object
+
+While Report plugins don't need to return anything other than their own data, that data is then wrapped into an immutable Report object.

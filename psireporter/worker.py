@@ -9,7 +9,10 @@ from psireporter.registry import Registry
 
 
 class Report(tuple):
+    """Report
 
+    This class wraps the data returned by reporters before it is
+    sent to an output plugin"""
     __slots__ = []
 
     def __new__(cls, **kwargs):
@@ -22,18 +25,24 @@ class Report(tuple):
 
     @property
     def id(self):
+        """Report ID"""
         return tuple.__getitem__(self, 0)
 
     @property
     def message(self):
+        """Report Message
+
+        This can be any kind of value"""
         return tuple.__getitem__(self, 1)
 
     @property
     def timestamp(self):
+        """Timestamp in seconds when the report was genreated"""
         return tuple.__getitem__(self, 3)
 
     @property
     def sender(self):
+        """Which reporter plugin sent this report"""
         return tuple.__getitem__(self, 2)
 
     def __iter__(self):
@@ -41,8 +50,13 @@ class Report(tuple):
             yield (key, getattr(self, key))
 
 
-
 class Manager(threading.Thread):
+    """Manager Thread
+
+    This is the main manager for psireporter. It will handle all work
+    of calling reporters at their required intervals, generating
+    Report objects, and sending them to the output plugins.
+    """
     def __init__(self, config=None, *args, **kwargs):
 
         self.logger = logging.getLogger(name='psireporter.manager')
@@ -234,6 +248,7 @@ class ReporterManager(threading.Thread):
         self._outputters = {}
         self._triggers = {}
         self._counter = 1
+        self._first_run = True
 
         for reporter_id, reporter in reporters:
 
@@ -283,15 +298,25 @@ class ReporterManager(threading.Thread):
         if self._counter > self._max_reporter_counter:
             self._counter = 1
 
-        for counter in self._trigger_counters:
-            if self._counter % counter == 0:
-                for reporter_id in self._triggers[counter]:
-                    reporter = self._reporters[reporter_id]
-                    message = reporter.report()
+        if self._first_run is True:
+            for reporter_id in sorted(self._reporters.keys()):
+                reporter = self._reporters[reporter_id]
+                message = reporter.report()
 
-                    report = self._reportClass(message=message, sender=reporter_id)
+                report = self._reportClass(message=message, sender=reporter_id)
 
-                    self._o_manager.add_report(report)
+                self._o_manager.add_report(report)
+            self._first_run = False
+        else:
+            for counter in self._trigger_counters:
+                if self._counter % counter == 0:
+                    for reporter_id in self._triggers[counter]:
+                        reporter = self._reporters[reporter_id]
+                        message = reporter.report()
+
+                        report = self._reportClass(message=message, sender=reporter_id)
+
+                        self._o_manager.add_report(report)
         self._counter += 1
 
     def run(self):
