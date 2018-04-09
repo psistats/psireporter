@@ -217,6 +217,8 @@ class ReporterManager(threading.Thread):
         self._reporter_counter = 0
         self._max_reporter_counter = 0
 
+        self._reportClass = kwargs.get('reportClass', Report)
+
         self._reporters = {}
         self._outputters = {}
         self._triggers = {}
@@ -276,7 +278,7 @@ class ReporterManager(threading.Thread):
                     reporter = self._reporters[reporter_id]
                     message = reporter.report()
 
-                    report = Report(message=message, sender=reporter_id)
+                    report = self._reportClass(message=message, sender=reporter_id)
 
                     self._o_manager.add_report(report)
         self._counter += 1
