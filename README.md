@@ -1,5 +1,8 @@
-#PsiReporter
-PsiReporter is a basic framework for task execution and broadcasting the results. It's designed for simplicity and small scale usage.
+# PsiReporter
+PsiReporter is a basic framework for multithreaded task execution and 
+broadcasting the results. It's designed for simplicity and small scale usage.
+
+For more information visit http://psireporter.readthedocs.io/en/develop/usage.html
 
 ## Usage
 ```py
