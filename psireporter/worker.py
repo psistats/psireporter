@@ -54,6 +54,12 @@ class Manager(threading.Thread):
         else:
             self.config = config
 
+        if 'reportClass' in kwargs:
+            self._reportClass = kwargs['reportClass']
+            del kwargs['reportClass']
+        else:
+            self._reportClas = Report
+
         super().__init__(*args, **kwargs)
 
     def start(self):
@@ -72,7 +78,9 @@ class Manager(threading.Thread):
         reporters = Registry.GetEntries('reporters')
 
         o_manager = OutputManager(outputters, self.config.get('outputters', {}))
-        r_manager = ReporterManager(reporters, o_manager, self.config.get('reporters', {}))
+        r_manager = ReporterManager(reporters, o_manager, self.config.get('reporters', {}),
+            reportClass=self._reportClass
+        )
 
         o_manager.start()
         r_manager.start()
@@ -218,6 +226,9 @@ class ReporterManager(threading.Thread):
         self._max_reporter_counter = 0
 
         self._reportClass = kwargs.get('reportClass', Report)
+
+        if 'reportClass' in kwargs:
+            del kwargs['reportClass']
 
         self._reporters = {}
         self._outputters = {}
