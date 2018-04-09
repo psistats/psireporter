@@ -56,8 +56,38 @@ class Manager(threading.Thread):
     This is the main manager for psireporter. It will handle all work
     of calling reporters at their required intervals, generating
     Report objects, and sending them to the output plugins.
+
+    The configuration should look something like this::
+
+        {
+        'reporters': {
+            'reporter-id': {
+            'interval': 1,
+            'enabled': True,
+            'settings': {}
+          }
+        },
+        'outputters': {
+            'output-id': {
+            'enabled': False,
+            'settings': {}
+          }
+        }
+
+    'reporters' is a list of reporter plugin configurations. Each
+    configuration has 'interval', 'enabled', and 'settings'.
+
+    'outputters' is a list of output plugin configurations. Each
+    configuration has 'enabled', and 'settings'.
+
+    The 'settings' dict is given to a plugin via the 'config'
+    attribute. This attribute is only available after construction
+    thus it is not available the plugin's __init__() method.
+
+    :param config: object Configuration object
+    :param reportClass: Report Which report class to use
     """
-    def __init__(self, config=None, *args, **kwargs):
+    def __init__(self, config=None, reportClass=Report, *args, **kwargs):
 
         self.logger = logging.getLogger(name='psireporter.manager')
 
@@ -68,25 +98,23 @@ class Manager(threading.Thread):
         else:
             self.config = config
 
-        if 'reportClass' in kwargs:
-            self._reportClass = kwargs['reportClass']
-            del kwargs['reportClass']
-        else:
-            self._reportClas = Report
+        self._reportClass = reportClass
 
         super().__init__(*args, **kwargs)
 
     def start(self):
+        """Start the Manager thread"""
         self.logger.debug('Starting...')
         self.running = True
         super().start()
 
     def stop(self):
+        """Stop the manager thread"""
         self.logger.debug('Stopping...')
         self.running = False
 
     def run(self):
-
+        """Starts the main loop"""
         self.logger.debug('Start manager threads')
         outputters = Registry.GetEntries('outputters')
         reporters = Registry.GetEntries('reporters')
@@ -110,6 +138,10 @@ class Manager(threading.Thread):
 
 
 class OutputWorker(threading.Thread):
+    """A thread that manages sending reports to an output plugin
+
+    It maintains its own queue separate from the main report queue, ensuring that
+    if errors or slowness occurs, no reports are lost."""
     def __init__(self, outputter, *args, **kwargs):
 
         logName = 'psireporter.output-worker' + outputter.__class__.__name__
@@ -121,18 +153,22 @@ class OutputWorker(threading.Thread):
         super().__init__(*args, **kwargs)
 
     def start(self):
+        """Start the Output Worker thread"""
         self.running = True
         self.logger.debug('Starting...')
         super().start()
 
     def stop(self):
+        """Stop the Output Worker thread"""
         self.logger.debug('Stopping...')
         self.running = False
 
     def add_report(self, report):
+        """Add report to the output queue"""
         self.report_queue.append(report)
 
     def tick(self):
+        """Executes every loop"""
         if len(self.report_queue) > 0:
             report = self.report_queue.popleft()
             self.outputter.send(report)
@@ -140,7 +176,7 @@ class OutputWorker(threading.Thread):
             time.sleep(1)
 
     def run(self):
-
+        """Stars the main loop"""
         self.logger.debug('Started')
 
         while self.running is True:
@@ -150,6 +186,9 @@ class OutputWorker(threading.Thread):
 
 
 class OutputManager(threading.Thread):
+    """Output Manager Thread
+
+    Manages output plugins and a master queue of reports."""
     def __init__(self, outputters, config=None, *args, **kwargs):
         self.logger = logging.getLogger(name='psireporter.output-manager')
         self._workers = []
@@ -185,26 +224,30 @@ class OutputManager(threading.Thread):
         super().__init__(*args, **kwargs)
 
     def start(self):
+        """Starts the Output Manager thread"""
         self.logger.debug('Starting...')
         self.running = True
         super().start()
 
     def stop(self):
+        """Stops the Output Manager thread"""
         self.logger.debug('Stopping...')
         self.running = False
 
     def add_report(self, report):
+        """Add a report to the master queue"""
         for worker in self._workers:
             worker.add_report(report)
 
     def has_running_workers(self):
+        """Returns True if there are running OutputWorker threads"""
         for worker in self._workers:
             if worker.running is True:
                 return True
         return False
 
     def run(self):
-
+        """Starts the main loop"""
         for worker in self._workers:
             worker.start()
 
@@ -223,7 +266,10 @@ class OutputManager(threading.Thread):
 
 
 class ReporterManager(threading.Thread):
+    """Reporter Manager Thread
 
+    Manages the various Reporter plugins and maintains the main loop
+    of reporters."""
     def __init__(self, reporters, o_manager, config=None, *args, **kwargs):
 
         self.logger = logging.getLogger('psireporter.reporter-manager')
@@ -286,15 +332,18 @@ class ReporterManager(threading.Thread):
         super().__init__(*args, **kwargs)
 
     def start(self):
+        """Start the Reporter Manager thread"""
         self.logger.debug('Starting...')
         self.running = True
         super().start()
 
     def stop(self):
+        """Stops the Reporter Manager thread"""
         self.logger.debug('Stopping...')
         self.running = False
 
     def tick(self):
+        """Executes every tick (1 second intervals)"""
         if self._counter > self._max_reporter_counter:
             self._counter = 1
 
@@ -320,6 +369,7 @@ class ReporterManager(threading.Thread):
         self._counter += 1
 
     def run(self):
+        """Starts the main loop"""
         self.logger.debug('Started')
         while self.running is True:
             self.tick()
