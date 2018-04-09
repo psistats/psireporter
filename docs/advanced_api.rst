@@ -1,5 +1,5 @@
 Advanced API
-------------
+************
 
 .. automodule:: psireporter.worker
   :members:

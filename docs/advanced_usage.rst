@@ -1,5 +1,5 @@
 Advanced Usage
---------------
+**************
 
 In this example, we configure a reporter to execute every five seconds, and to increment at a configured rate. As well, we setup an output plugin to print the counter, but with a configurable prefix.
 

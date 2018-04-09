@@ -1,5 +1,5 @@
 Basic Usage
------------
+***********
 
 In this basic example, you create a counter that will increment every second, an output plugin that simply outputs the report to stdout.
 

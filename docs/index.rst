@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 psireporter
-=======================================
+***********
 
 .. toctree::
    :maxdepth: 2
@@ -13,5 +13,6 @@ psireporter
    usage
    basic_api
    advanced_api
+   plugins
 
 
