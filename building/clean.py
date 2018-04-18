@@ -3,7 +3,7 @@
 import os
 import shutil
 
-dirs = ['./htmlcov', './dist', './.tox', './.pytest_cache']
+dirs = ['./htmlcov', './dist', './.tox', './.pytest_cache', './build']
 files = ['./.coverage', './coverage.xml']
 
 for dirname in dirs:
