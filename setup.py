@@ -5,6 +5,6 @@ setup(name='psireporter',
       description='Simple reporting microframework',
       author='Alex Dow',
       author_email='adow@psikon.com',
-      url='http://github.com/alex-dow/psi-reporter',
+      url='http://github.com/psistats/psireporter',
       packages=['psireporter']
 )
