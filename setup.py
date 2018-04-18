@@ -1,6 +1,6 @@
 from distutils.core import setup
 
-setup(name='psi-reporter',
+setup(name='psireporter',
       version='0.1.0-develop',
       description='Simple reporting microframework',
       author='Alex Dow',
